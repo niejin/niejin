@@ -11,7 +11,7 @@ import org.springframework.boot.context.embedded.EmbeddedServletContainerCustomi
  * @Time    2017年2月20日
  *
 **/
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages ="com.duowan.niejin.thrift")
 public class ApplicationMain implements EmbeddedServletContainerCustomizer{
 	public static void main(String[] args) {
 		SpringApplication.run(ApplicationMain.class, args);

@@ -12,6 +12,7 @@ import org.apache.thrift.TServiceClientFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.FactoryBean;
+import org.springframework.beans.factory.InitializingBean;
 
 import com.duowan.niejin.thirft.support.zookeeper.ThriftServerAddressProvider;
 
@@ -21,7 +22,7 @@ import com.duowan.niejin.thirft.support.zookeeper.ThriftServerAddressProvider;
  * @Time 2017年3月8日
  * @version 客户端代理工厂
  **/
-public class ThriftServiceClientProxyFactory implements FactoryBean {
+public class ThriftServiceClientProxyFactory implements FactoryBean,InitializingBean{
 
 	private static final Logger logger = LoggerFactory.getLogger(ThriftServiceClientProxyFactory.class);
 
@@ -49,8 +50,15 @@ public class ThriftServiceClientProxyFactory implements FactoryBean {
 		}
 	};
 
+	@Override
+	public void afterPropertiesSet() throws Exception {
+		//init();
+	}
+
+	
 	@PostConstruct
 	public void init() {
+		System.out.println("########################## ThrifterviceClientProxyFactory init.");
 		try {
 			ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 			// 加载Iface接口
@@ -169,5 +177,4 @@ public class ThriftServiceClientProxyFactory implements FactoryBean {
 	public boolean isSingleton() {
 		return true;
 	}
-
 }

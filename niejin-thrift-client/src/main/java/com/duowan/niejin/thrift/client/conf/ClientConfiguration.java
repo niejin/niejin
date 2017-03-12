@@ -1,5 +1,8 @@
 package com.duowan.niejin.thrift.client.conf;
 
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -23,6 +26,20 @@ public class ClientConfiguration {
 	private Integer connectionTimeout = 30000;
 	private Boolean isSingleton = true;
 	
+	
+	@Bean
+	public CuratorFramework zookeeper(){
+		CuratorFramework zk = CuratorFrameworkFactory.builder()
+											.connectString(String.format("%s:%s", this.zkHost,this.zkPort))
+											.sessionTimeoutMs(this.sessionTimeout)
+											.connectionTimeoutMs(this.connectionTimeout)
+											.canBeReadOnly(false)
+											.retryPolicy(new ExponentialBackoffRetry(1000, Integer.MAX_VALUE))
+											.namespace("rpc" + "/" + this.namespace)
+											.defaultData(null).build();
+		return zk;
+	}
+	
 	@Bean
 	public ZookeeperFactory thriftZookeeperFactory(){
 		ZookeeperFactory thriftZookeeperFactory = new ZookeeperFactory();
@@ -34,28 +51,28 @@ public class ClientConfiguration {
 		return thriftZookeeperFactory;
 	}
 	
-	/*@Bean
+	@Bean
 	public ThriftServerAddressProvider thriftServerAddressProviderZookeeper() throws Exception{
 		ThriftServerAddressProviderZookeeper thriftServerAddressProviderZookeeper = new ThriftServerAddressProviderZookeeper();
 		thriftServerAddressProviderZookeeper.setService("com.duowan.niejin.thrift.UserService");
 		thriftServerAddressProviderZookeeper.setVersion("1.0.0");
-		thriftServerAddressProviderZookeeper.setZkClient(this.thriftZookeeperFactory().getObject());
+		thriftServerAddressProviderZookeeper.setZkClient(this.zookeeper());
 		return thriftServerAddressProviderZookeeper;
-	}*/
+	}
 	
 	@Bean
 	public ThriftServiceClientProxyFactory thriftServiceProxy() throws Exception{
 		//CREATE ThriftServerAddressProviderZookeeper
-		ThriftServerAddressProviderZookeeper thriftServerAddressProviderZookeeper = new ThriftServerAddressProviderZookeeper();
+		/*ThriftServerAddressProviderZookeeper thriftServerAddressProviderZookeeper = new ThriftServerAddressProviderZookeeper();
 		thriftServerAddressProviderZookeeper.setService("com.duowan.niejin.thrift.UserService");
 		thriftServerAddressProviderZookeeper.setVersion("1.0.0");
 		thriftServerAddressProviderZookeeper.setZkClient(this.thriftZookeeperFactory().getObject());
+		thriftServerAddressProviderZookeeper.init();*/
 		//CREATA ClientProxy
 		ThriftServiceClientProxyFactory thriftServiceProxy = new ThriftServiceClientProxyFactory();
 		thriftServiceProxy.setIdleTime(1800000);
 		thriftServiceProxy.setMaxActive(5);
-		thriftServiceProxy.setServerAddressProvider(thriftServerAddressProviderZookeeper);
-		
+		thriftServiceProxy.setServerAddressProvider(this.thriftServerAddressProviderZookeeper());
 		return thriftServiceProxy;
 	}
 }

@@ -3,7 +3,6 @@ package com.duowan.niejin.thirft.support.zookeeper;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -16,14 +15,19 @@ import javax.annotation.PostConstruct;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
-import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 /**
  *
@@ -31,7 +35,7 @@ import org.slf4j.LoggerFactory;
  * @Time    2017年3月7日
  *
 **/
-public class ThriftServerAddressProviderZookeeper implements ThriftServerAddressProvider {
+public class ThriftServerAddressProviderZookeeper implements ThriftServerAddressProvider,InitializingBean{
 
 	private static final Logger logger = LoggerFactory.getLogger(ThriftServerAddressProviderZookeeper.class);
 
@@ -39,8 +43,9 @@ public class ThriftServerAddressProviderZookeeper implements ThriftServerAddress
 	private String service;
 	//服务版本
 	private String version;
+	
 	//zk 客户端
-	private CuratorFramework zkClient;
+	private CuratorFramework zkClient ;
 
 	private static CountDownLatch countDownLatch = new CountDownLatch(1);//避免 zk 还没有连接上 就去调用服务了
 	
@@ -57,31 +62,42 @@ public class ThriftServerAddressProviderZookeeper implements ThriftServerAddress
 	
 	private PathChildrenCache zkCachedPath;
 	
+	private static boolean isInited = false;
+	
 	public ThriftServerAddressProviderZookeeper(){}
 	
-	public ThriftServerAddressProviderZookeeper(CuratorFramework zk){
-		this.zkClient = zk;
+	@Override
+	public void afterPropertiesSet() throws Exception {
+		if(!isInited){
+			init();	
+		}
 	}
 	
-	@PostConstruct
+	//@PostConstruct
 	public void init() throws Exception{
-		logger.info("enter ThriftServerAddressProviderZookeeper init ...");
+		System.out.println("ThriftServerAddressProviderZookeeper init ...");
 		if(zkClient.getState() == CuratorFrameworkState.LATENT){
 			zkClient.start();
 		}
 		
 		this.buildPatchChildrenCache(zkClient, this.getServicePath(), true);
+		
 		zkCachedPath.start(StartMode.POST_INITIALIZED_EVENT);
-		countDownLatch.wait();
+		//同步 等待
+		synchronized(ThriftServerAddressProviderZookeeper.class){
+			System.out.println("########### CountDownLatch await");
+			countDownLatch.await();
+		}
 	}
 
 	private void buildPatchChildrenCache(final CuratorFramework client,String path,Boolean cacheData){
+		System.out.println("######## buildPatchChildrenCache");
 		zkCachedPath = new PathChildrenCache(client,path,cacheData);
-		
 		zkCachedPath.getListenable().addListener(new PathChildrenCacheListener() {
 			@Override
 			public void childEvent(CuratorFramework zk, PathChildrenCacheEvent event) throws Exception {
 				PathChildrenCacheEvent.Type eventType = event.getType();
+				System.out.println("######## PathChildrenCacheEvent:" + eventType);
 				switch (eventType) {
 				case CONNECTION_RECONNECTED:
 					logger.info("zk connection is reconnected");
@@ -103,6 +119,7 @@ public class ThriftServerAddressProviderZookeeper implements ThriftServerAddress
 				zkCachedPath.rebuild();
 				//
 				this.rebuild();
+				//countDown sign
 				countDownLatch.countDown();
 			}
 			
@@ -227,4 +244,20 @@ public class ThriftServerAddressProviderZookeeper implements ThriftServerAddress
 		this.service = service;
 	}
 	
+	public static void main(String[] args) throws Exception {
+		CuratorFramework zk = CuratorFrameworkFactory.builder().connectString("172.17.5.181:2181")
+				.sessionTimeoutMs(30000).connectionTimeoutMs(30000).canBeReadOnly(false)
+				.retryPolicy(new ExponentialBackoffRetry(1000, Integer.MAX_VALUE)).namespace("rpc" + "/" + "thrift.rpc")
+				.defaultData(null).build();
+		
+		ThriftServerAddressProviderZookeeper provider = new ThriftServerAddressProviderZookeeper();
+		provider.setZkClient(zk);
+		provider.setService("com.duowan.niejin.thrift.UserService");
+		provider.setVersion("1.0.0");
+		
+		provider.init();
+		
+		System.out.println("#############################" + provider.selector());
+	}
+
 }

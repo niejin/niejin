@@ -100,12 +100,12 @@ public class ZookeeperFactory implements FactoryBean<CuratorFramework> {
 		if(StringUtils.isBlank(namespace)){
 			namespace = this.ROOT;
 		}else{
-			namespace = this.ROOT + File.separator + namespace;
+			namespace = this.ROOT + "/" + namespace;
 		}
 		return create(host,sessiontimeout,connectiontimeout,namespace);
 	}
 	
-	public static CuratorFramework create(String host,Integer sessiontimeout,Integer connectiontimeout,String namespace){
+	private CuratorFramework create(String host,Integer sessiontimeout,Integer connectiontimeout,String namespace){
 		return CuratorFrameworkFactory.builder()
 				.connectString(host)
 				.sessionTimeoutMs(sessiontimeout)
