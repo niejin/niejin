@@ -1,0 +1,7 @@
+NIO
+ 多路复用IO 
+ 	channel 通道
+ 	buffer 缓存
+ 	选择器 selector
+ 	
+ 	

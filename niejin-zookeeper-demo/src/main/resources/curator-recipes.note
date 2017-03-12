@@ -1,0 +1,8 @@
+Curator :
+		Framework : 基本zookeeper命令封装
+		recipses : 高级特性
+
+选举
+	LeaderLatch  选举leader 信息
+	LeaderSelector 选举Leader 监听
+		

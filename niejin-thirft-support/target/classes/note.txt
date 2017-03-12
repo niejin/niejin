@@ -1,0 +1,12 @@
+Common-pool 池处理请求
+	Commons-pool 本质上是“对象池”
+	
+
+Thrift 多路复用 
+		TMultiplexedProcessor
+		
+熔断器
+
+负载均衡
+
+zookeeper 服务注册
