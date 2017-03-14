@@ -93,13 +93,11 @@ public class ThriftClientPoolFactory extends BasePoolableObjectFactory<TServiceC
 
 	@Override
 	public void activateObject(TServiceClient client) throws Exception {
-		// TODO Auto-generated method stub
 		super.activateObject(client);
 	}
 
 	@Override
 	public void passivateObject(TServiceClient client) throws Exception {
-		// TODO Auto-generated method stub
 		super.passivateObject(client);
 	}
 	

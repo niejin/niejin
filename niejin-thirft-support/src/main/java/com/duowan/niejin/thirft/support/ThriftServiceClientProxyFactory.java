@@ -22,7 +22,7 @@ import com.duowan.niejin.thirft.support.zookeeper.ThriftServerAddressProvider;
  * @Time 2017年3月8日
  * @version 客户端代理工厂
  **/
-public class ThriftServiceClientProxyFactory implements FactoryBean,InitializingBean{
+public class ThriftServiceClientProxyFactory implements FactoryBean<Object>,InitializingBean{
 
 	private static final Logger logger = LoggerFactory.getLogger(ThriftServiceClientProxyFactory.class);
 
@@ -35,6 +35,8 @@ public class ThriftServiceClientProxyFactory implements FactoryBean,Initializing
 	private Object proxyClient;
 
 	private Class<?> objectClass;
+	
+	private boolean isInited = false;
 
 	private GenericObjectPool<TServiceClient> pool;
 
@@ -52,13 +54,13 @@ public class ThriftServiceClientProxyFactory implements FactoryBean,Initializing
 
 	@Override
 	public void afterPropertiesSet() throws Exception {
-		//init();
+		if(isInited){
+			this.init();
+		}
 	}
 
 	
-	@PostConstruct
 	public void init() {
-		System.out.println("########################## ThrifterviceClientProxyFactory init.");
 		try {
 			ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 			// 加载Iface接口

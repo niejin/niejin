@@ -78,12 +78,13 @@ public class ZookeeperFactory implements FactoryBean<CuratorFramework> {
 			synchronized (ZookeeperFactory.class) {
 				CuratorFramework tmp = zkClient;
 				if(tmp == null){
-					tmp = create();
+					tmp = this.create();
 					zkClient = tmp;
 				}
 			}
+			return zkClient;
 		}
-		return create();
+		return this.create();
 	}
 
 	@Override

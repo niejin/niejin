@@ -17,6 +17,7 @@ import org.apache.thrift.transport.TNonblockingServerSocket;
 import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.InitializingBean;
 
 import com.duowan.niejin.thirft.support.zookeeper.ThriftServerAddressRegister;
 import com.duowan.niejin.thirft.support.zookeeper.ThriftServerIpResolve;
@@ -28,7 +29,7 @@ import com.duowan.niejin.thirft.support.zookeeper.ThriftServerIpResolveLocalNetw
  * @Time 2017年3月8日
  * @version 服务端工厂类
  **/
-public class ThriftServiceServerFactory {
+public class ThriftServiceServerFactory implements InitializingBean {
 
 	private static final Logger logger = LoggerFactory.getLogger(ThriftServiceServerFactory.class);
 
@@ -68,7 +69,11 @@ public class ThriftServiceServerFactory {
         this.thriftServerAddressRegister = thriftServerAddressRegister;
     }
 
-	@PostConstruct
+    @Override
+    public void afterPropertiesSet() throws Exception {
+    	this.init();
+    }
+    
 	public void init() throws Exception{
 		if(thriftServerIpResolve == null){
 			thriftServerIpResolve = new ThriftServerIpResolveLocalNetwork();

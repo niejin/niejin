@@ -29,15 +29,16 @@ public class ClientConfiguration {
 	
 	@Bean
 	public CuratorFramework zookeeper(){
-		CuratorFramework zk = CuratorFrameworkFactory.builder()
-											.connectString(String.format("%s:%s", this.zkHost,this.zkPort))
-											.sessionTimeoutMs(this.sessionTimeout)
-											.connectionTimeoutMs(this.connectionTimeout)
-											.canBeReadOnly(false)
-											.retryPolicy(new ExponentialBackoffRetry(1000, Integer.MAX_VALUE))
-											.namespace("rpc" + "/" + this.namespace)
-											.defaultData(null).build();
-		return zk;
+		return CuratorFrameworkFactory
+									.builder()
+									.connectString(String.format("%s:%s", this.zkHost,this.zkPort))
+									.sessionTimeoutMs(this.sessionTimeout)
+									.connectionTimeoutMs(this.connectionTimeout)
+									.canBeReadOnly(false)
+									.retryPolicy(new ExponentialBackoffRetry(1000, Integer.MAX_VALUE))
+									.namespace("rpc" + "/" + this.namespace)
+									.defaultData(null)
+									.build();
 	}
 	
 	@Bean
@@ -56,18 +57,12 @@ public class ClientConfiguration {
 		ThriftServerAddressProviderZookeeper thriftServerAddressProviderZookeeper = new ThriftServerAddressProviderZookeeper();
 		thriftServerAddressProviderZookeeper.setService("com.duowan.niejin.thrift.UserService");
 		thriftServerAddressProviderZookeeper.setVersion("1.0.0");
-		thriftServerAddressProviderZookeeper.setZkClient(this.zookeeper());
+		thriftServerAddressProviderZookeeper.setZookeeperFactory(this.thriftZookeeperFactory());
 		return thriftServerAddressProviderZookeeper;
 	}
 	
 	@Bean
 	public ThriftServiceClientProxyFactory thriftServiceProxy() throws Exception{
-		//CREATE ThriftServerAddressProviderZookeeper
-		/*ThriftServerAddressProviderZookeeper thriftServerAddressProviderZookeeper = new ThriftServerAddressProviderZookeeper();
-		thriftServerAddressProviderZookeeper.setService("com.duowan.niejin.thrift.UserService");
-		thriftServerAddressProviderZookeeper.setVersion("1.0.0");
-		thriftServerAddressProviderZookeeper.setZkClient(this.thriftZookeeperFactory().getObject());
-		thriftServerAddressProviderZookeeper.init();*/
 		//CREATA ClientProxy
 		ThriftServiceClientProxyFactory thriftServiceProxy = new ThriftServiceClientProxyFactory();
 		thriftServiceProxy.setIdleTime(1800000);

@@ -1,9 +1,19 @@
 package com.duowan.niejin.thirft.support.zookeeper;
 
+import java.util.List;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.api.CuratorEvent;
+import org.apache.curator.framework.api.CuratorListener;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
+import org.apache.curator.framework.recipes.cache.ChildData;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,10 +56,23 @@ public class ThriftServerAddressRegisterZookeeper implements ThriftServerAddress
 
 		// 创建临时的节点
 		try {
-			zkClient.create()
-				.creatingParentsIfNeeded()
-				.withMode(CreateMode.EPHEMERAL)
-				.forPath("/" + service + "/" + version + "/" + address);
+			Stat stat = zkClient.checkExists().forPath("/" + service + "/" + version);
+			if (stat == null) {
+				//Service 根目录创建为PERSISTENT[持久化]
+				zkClient.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT)
+						.forPath("/" + service + "/" + version);
+			}
+			
+			zkClient.create().creatingParentsIfNeeded()
+							.withMode(CreateMode.EPHEMERAL_SEQUENTIAL)
+							.forPath("/" + service + "/" + version + "/" + "node",address.getBytes());
+			
+			zkClient.getCuratorListenable().addListener(new CuratorListener() {
+				@Override
+				public void eventReceived(CuratorFramework client, CuratorEvent event) throws Exception {
+					System.out.println("zookeeper register event :" + event.getName());
+				}
+			});
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			throw new ThriftException("register thrift service to zookeeper exception {}", e);
@@ -59,5 +82,4 @@ public class ThriftServerAddressRegisterZookeeper implements ThriftServerAddress
 	public void close() {
 		zkClient.close();
 	}
-
 }
