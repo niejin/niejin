@@ -1,7 +1,9 @@
 package com.duowan.niejin.thirft.support.balance;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -13,17 +15,13 @@ import java.util.Set;
 public class RandomStrategy implements ServiceLoadBalanceStrategy {
 
 	@Override
-	public String select(HashMap<String, Integer> serverMap) {
-		if (serverMap == null || serverMap.isEmpty())
+	public InetSocketAddress select(List<InetSocketAddress> servers){
+		if (servers == null || servers.isEmpty())
 			return null;
 
-		Set<String> keys = serverMap.keySet();
-		ArrayList<String> keysList = new ArrayList<String>();
-		keysList.addAll(keys);
-		
 		java.util.Random random = new java.util.Random();
-		int randomPos = random.nextInt(keysList.size());
-		return keysList.get(randomPos);
+		int randomPos = random.nextInt(servers.size());
+		return servers.get(randomPos);
 	}
 
 }

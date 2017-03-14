@@ -1,6 +1,7 @@
 package com.duowan.niejin.thirft.support.balance;
 
-import java.util.HashMap;
+import java.net.InetSocketAddress;
+import java.util.List;
 
 /**
  *
@@ -9,5 +10,5 @@ import java.util.HashMap;
  *
 **/
 public interface ServiceLoadBalanceStrategy {
-	String select(HashMap<String, Integer> serverMap);
+	InetSocketAddress select(List<InetSocketAddress> servers);
 }

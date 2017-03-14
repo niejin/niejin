@@ -54,9 +54,7 @@ public class ThriftServiceClientProxyFactory implements FactoryBean<Object>,Init
 
 	@Override
 	public void afterPropertiesSet() throws Exception {
-		if(isInited){
-			this.init();
-		}
+		this.init();
 	}
 
 	

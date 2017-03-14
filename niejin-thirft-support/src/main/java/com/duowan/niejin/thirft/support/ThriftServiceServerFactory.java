@@ -84,7 +84,7 @@ public class ThriftServiceServerFactory implements InitializingBean {
 			throw new ThriftException("cannot find rpc ip.");
 		}
 		
-		String hostName = serverIp + ":" + port + ":" + weight;
+		String hostName = serverIp + ":" + port;
 		
 		Class<?> serviceClass = service.getClass();
 		

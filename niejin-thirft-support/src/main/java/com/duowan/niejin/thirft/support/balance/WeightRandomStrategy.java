@@ -1,9 +1,13 @@
 package com.duowan.niejin.thirft.support.balance;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
+
+import org.apache.commons.lang3.NotImplementedException;
 
 /**
  *
@@ -14,8 +18,9 @@ import java.util.Set;
 public class WeightRandomStrategy implements ServiceLoadBalanceStrategy {
 
 	@Override
-	public String select(HashMap<String, Integer> serverMap) {
-		if (serverMap == null || serverMap.isEmpty())
+	public InetSocketAddress select(List<InetSocketAddress> servers){
+		throw new NotImplementedException("undo");
+		/*if (servers == null || servers.isEmpty())
 			return null;
 
 		Set<String> keys = serverMap.keySet();
@@ -33,7 +38,7 @@ public class WeightRandomStrategy implements ServiceLoadBalanceStrategy {
 		java.util.Random random = new java.util.Random();
 		int randomPos = random.nextInt(keysList.size());
 
-		return keysList.get(randomPos);
+		return keysList.get(randomPos);*/
 	}
 
 }

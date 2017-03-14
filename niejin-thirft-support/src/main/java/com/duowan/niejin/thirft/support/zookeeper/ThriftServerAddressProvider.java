@@ -26,5 +26,8 @@ public interface ThriftServerAddressProvider {
      */
     InetSocketAddress selector();
 
+    /**
+     * close
+     */
     void close();
 }

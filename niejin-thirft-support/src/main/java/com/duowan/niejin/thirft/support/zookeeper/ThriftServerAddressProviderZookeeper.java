@@ -1,6 +1,7 @@
 package com.duowan.niejin.thirft.support.zookeeper;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,6 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.InitializingBean;
 
+import com.duowan.niejin.thirft.support.balance.ServiceLoadBalanceStrategy;
+
 /**
  *
  * @author  N.Jin{@link niejin@yy.com}
@@ -41,27 +44,25 @@ public class ThriftServerAddressProviderZookeeper implements ThriftServerAddress
 	private String service;
 	//服务版本
 	private String version;
+	
 	//zk 客户端
 	private CuratorFramework zkClient ;
 	//zookeeper Factory
 	private ZookeeperFactory zookeeperFactory;
 
+	private ServiceLoadBalanceStrategy serviceBalance;
+	
 	private static CountDownLatch countDownLatch = new CountDownLatch(1);//避免 zk 还没有连接上 就去调用服务了
 	
-	//用来保存当前provider所接触的地址记录，当zookeeper集群故障时，可以使用trace中地址作为备份
-	private Set<String> trace = new HashSet<String>();
-	
 	private final List<InetSocketAddress> addressContainer = new ArrayList<InetSocketAddress>();
-	
-	private Queue<InetSocketAddress> inner = new LinkedList<InetSocketAddress>();
+	//用来保存当前provider所接触的地址记录，当zookeeper集群故障时，可以使用localTraceContainer中地址作为备份
+	private	Set<String> localTraceContainer = new HashSet<String>();
 	
 	private Object lock = new Object();
 	
-	private static final Integer DEFAULT_WEIGHT = 1;
-	
 	private PathChildrenCache zkCachedPath;
 	
-	private static boolean isInited = false;
+	private boolean isInited = false;
 	
 	public ThriftServerAddressProviderZookeeper(){}
 	
@@ -90,21 +91,24 @@ public class ThriftServerAddressProviderZookeeper implements ThriftServerAddress
 		
 		zkCachedPath.start(StartMode.POST_INITIALIZED_EVENT);
 		//同步 等待
-		synchronized(ThriftServerAddressProviderZookeeper.class){
+		synchronized(this){
 			countDownLatch.await();
 		}
 	}
 
+	/**
+	 * UNDO
+	 * @param client
+	 */
 	private void buildZookeeperClientConnectionStateListen(final CuratorFramework client){
 		client.getConnectionStateListenable().addListener(new ConnectionStateListener() {
-			
 			@Override
 			public void stateChanged(CuratorFramework client, ConnectionState newState) {
 				System.out.println("client state:" + newState.name());
 				switch (newState) {
 				case CONNECTED:	break;
 				case READ_ONLY:	break;
-				case LOST : /* 可是 断线重连 (注册)*/break;
+				case LOST : /* 可是 断线重连 (注册)*/ break;
 				case RECONNECTED :break;
 				case SUSPENDED: break;
 				default: break;
@@ -134,12 +138,11 @@ public class ThriftServerAddressProviderZookeeper implements ThriftServerAddress
 				case INITIALIZED:
 					logger.info("zk connection initialized");
 				default:
-					// TODO
-					break;
+					break;// TODO
 				}
-				
 				//任何节点的数据变法，都rebuild //simple
 				zkCachedPath.rebuild();
+				
 				this.rebuild();
 				//countDown sign
 				countDownLatch.countDown();
@@ -157,24 +160,25 @@ public class ThriftServerAddressProviderZookeeper implements ThriftServerAddress
 				}
 
 				List<InetSocketAddress> current = new ArrayList<InetSocketAddress>();
-				String path = null;
-				for(ChildData data : children){
-					path = data.getPath();
-					logger.debug("zk get child path : {}",path);
-					path = path.substring(getServicePath().length() + 1);
-					logger.debug("zk get child path serviceAddress : {}",path);
-					String address = new String(path.getBytes(),"utf-8");
+				for(ChildData child : children){
+					String path = child.getPath();
+					String data = new String(child.getData(),"utf-8");
+					logger.debug("zookeeper node path:{},data:{}",path,data);
+					try {
+						InetSocketAddress address = transfer(data);
+						if(address != null){
+							localTraceContainer.add(data);
+							current.add(address);
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
 					
-					current.addAll(transfer(address));
-					trace.add(address);
 				}
 
-				Collections.shuffle(current);
 				synchronized (lock) {
                     addressContainer.clear();
                     addressContainer.addAll(current);
-                    inner.clear();
-                    inner.addAll(current);
                 }
 				  
 			}
@@ -196,46 +200,39 @@ public class ThriftServerAddressProviderZookeeper implements ThriftServerAddress
 
 	@Override
 	public List<InetSocketAddress> findServerAddressList() {
-		//WHY TODO
 		return (List<InetSocketAddress>) Collections.unmodifiableCollection(addressContainer);
 	}
 
 	@Override
 	public InetSocketAddress selector() {
-		if(inner.isEmpty()){
-			synchronized(lock){
-				if(!addressContainer.isEmpty()){
-					inner.addAll(addressContainer);
-				}else if(!trace.isEmpty()){
-					for (String hostAddress : trace) {
-						addressContainer.addAll(transfer(hostAddress));
-                    }
-					//随机排列 addressContainer
-                    Collections.shuffle(addressContainer);
-                    inner.addAll(addressContainer);
+		InetSocketAddress address = null;
+		synchronized (lock) {
+			if(this.addressContainer.isEmpty()){
+				if(!localTraceContainer.isEmpty()){
+					for(String hostAddress : localTraceContainer){
+						addressContainer.add(transfer(hostAddress));
+					}
 				}
 			}
+			if(!this.addressContainer.isEmpty()){
+				address = serviceBalance.select(addressContainer);
+			}
 		}
-		return inner.poll();
+		return address;
 	}
 	
-	private List<InetSocketAddress> transfer(String hostAddress) {
+	private InetSocketAddress transfer(String hostAddress){
 		if(StringUtils.isBlank(hostAddress))
 			return null;
-		
-		String[] hostname = hostAddress.split(":");
-		Integer weight = DEFAULT_WEIGHT;
-		if(hostname.length == 3){
-			weight = Integer.valueOf(hostname[2]);
+		try {
+			String[] hostname = hostAddress.split(":");
+			return new InetSocketAddress(hostname[0], Integer.parseInt(hostname[1]));
+		} catch (Exception e) {
+			logger.error(e.getMessage(),e);
 		}
-		List<InetSocketAddress> items = new ArrayList<InetSocketAddress>();
-		// 根据优先级，将ip：port添加多次到地址集中，然后随机取地址实现负载
-		for(int i = 0 ; i < weight ;i++){
-			items.add(new InetSocketAddress(hostname[0], Integer.parseInt(hostname[1])));
-		}
-		return items;
+		return null;
 	}
-
+	
 	@Override
 	public void close() {
 		try {
@@ -270,6 +267,14 @@ public class ThriftServerAddressProviderZookeeper implements ThriftServerAddress
 		this.zookeeperFactory = zookeeperFactory;
 	}
 	
+	public ServiceLoadBalanceStrategy getServiceBalance() {
+		return serviceBalance;
+	}
+
+	public void setServiceBalance(ServiceLoadBalanceStrategy serviceBalance) {
+		this.serviceBalance = serviceBalance;
+	}
+
 	public static void main(String[] args) throws Exception {
 		CuratorFramework zk = CuratorFrameworkFactory.builder().connectString("172.17.5.181:2181")
 				.sessionTimeoutMs(30000).connectionTimeoutMs(30000).canBeReadOnly(false)

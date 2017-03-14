@@ -1,5 +1,7 @@
 package com.duowan.niejin.thrift.client.conf;
 
+import java.util.Random;
+
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -7,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.duowan.niejin.thirft.support.ThriftServiceClientProxyFactory;
+import com.duowan.niejin.thirft.support.balance.RandomStrategy;
 import com.duowan.niejin.thirft.support.zookeeper.ThriftServerAddressProvider;
 import com.duowan.niejin.thirft.support.zookeeper.ThriftServerAddressProviderZookeeper;
 import com.duowan.niejin.thirft.support.zookeeper.ZookeeperFactory;
@@ -58,6 +61,7 @@ public class ClientConfiguration {
 		thriftServerAddressProviderZookeeper.setService("com.duowan.niejin.thrift.UserService");
 		thriftServerAddressProviderZookeeper.setVersion("1.0.0");
 		thriftServerAddressProviderZookeeper.setZookeeperFactory(this.thriftZookeeperFactory());
+		thriftServerAddressProviderZookeeper.setServiceBalance(new RandomStrategy());
 		return thriftServerAddressProviderZookeeper;
 	}
 	

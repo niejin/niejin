@@ -12,6 +12,8 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode;
+import org.apache.curator.framework.state.ConnectionState;
+import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
@@ -45,7 +47,7 @@ public class ThriftServerAddressRegisterZookeeper implements ThriftServerAddress
 	}
 
 	@Override
-	public void register(String service, String version, String address) throws ThriftException {
+	public void register(String service,String version, final String address) throws ThriftException {
 		if (zkClient.getState() == CuratorFrameworkState.LATENT) {
 			zkClient.start();
 		}
@@ -54,23 +56,33 @@ public class ThriftServerAddressRegisterZookeeper implements ThriftServerAddress
 			version = "1.0.0";
 		}
 
+		final String path = "/" + service + "/" + version;
 		// 创建临时的节点
 		try {
-			Stat stat = zkClient.checkExists().forPath("/" + service + "/" + version);
+			Stat stat = zkClient.checkExists().forPath(path);
 			if (stat == null) {
 				//Service 根目录创建为PERSISTENT[持久化]
 				zkClient.create().creatingParentsIfNeeded().withMode(CreateMode.PERSISTENT)
-						.forPath("/" + service + "/" + version);
+						.forPath(path);
 			}
 			
 			zkClient.create().creatingParentsIfNeeded()
 							.withMode(CreateMode.EPHEMERAL_SEQUENTIAL)
-							.forPath("/" + service + "/" + version + "/" + "node",address.getBytes());
+							.forPath(path + "/" + "node",address.getBytes());
 			
-			zkClient.getCuratorListenable().addListener(new CuratorListener() {
+			zkClient.getConnectionStateListenable().addListener(new ConnectionStateListener() {
 				@Override
-				public void eventReceived(CuratorFramework client, CuratorEvent event) throws Exception {
-					System.out.println("zookeeper register event :" + event.getName());
+				public void stateChanged(CuratorFramework client, ConnectionState newState) {
+					System.out.println("Zookeeper register connection status : " + newState.name());
+					//session 过期 导致LOST 重连.
+					if(newState == ConnectionState.LOST){
+						try {
+							client.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL_SEQUENTIAL)
+									.forPath(path + "/" + "node", address.getBytes());
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
 				}
 			});
 		} catch (Exception e) {
