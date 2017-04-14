@@ -1,0 +1,1 @@
+curator-x-discovery //提供的注册发现服务

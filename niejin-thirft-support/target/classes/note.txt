@@ -4,8 +4,13 @@ Common-pool 池处理请求
 
 Thrift 多路复用 
 		TMultiplexedProcessor
-		
+
+Api 网关
+	网关/解耦/权限
+
 熔断器
+	Netflix/Hystrix 
+	Guava RateLimiter
 
 负载均衡
 

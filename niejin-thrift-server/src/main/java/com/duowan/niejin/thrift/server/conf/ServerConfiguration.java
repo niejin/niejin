@@ -1,9 +1,14 @@
 package com.duowan.niejin.thrift.server.conf;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.duowan.niejin.thirft.support.ServiceNode;
+import com.duowan.niejin.thirft.support.ThriftServiceMultiServerFactory;
 import com.duowan.niejin.thirft.support.ThriftServiceServerFactory;
 import com.duowan.niejin.thirft.support.zookeeper.ThriftServerAddressRegisterZookeeper;
 import com.duowan.niejin.thirft.support.zookeeper.ZookeeperFactory;
@@ -44,7 +49,7 @@ public class ServerConfiguration {
 		return thriftServiceAddressRegister;
 	}
 	
-	@Bean
+	/*@Bean
 	public ThriftServiceServerFactory registerUserService() throws Exception{
 		ThriftServiceServerFactory userServiceRegister =  new ThriftServiceServerFactory();
 		userServiceRegister.setService(userService);
@@ -53,5 +58,22 @@ public class ServerConfiguration {
 		userServiceRegister.setWeight(1);
 		userServiceRegister.setThriftServerAddressRegister(this.thriftServiceAddressRegister());
 		return userServiceRegister;
+	}*/
+	
+	@Bean
+	public ThriftServiceMultiServerFactory registerService()throws Exception{
+		ThriftServiceMultiServerFactory registerService = new ThriftServiceMultiServerFactory();
+		
+		List<ServiceNode> services = new ArrayList<ServiceNode>();
+		ServiceNode node = new ServiceNode();
+		node.setService(userService);
+		node.setVersion("1.0.0");
+		node.setWeight(1);
+		services.add(node);
+		
+		registerService.setServices(services);
+		registerService.setPort(9090);
+		registerService.setThriftServerAddressRegister(this.thriftServiceAddressRegister());
+		return registerService;
 	}
 }

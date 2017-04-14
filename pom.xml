@@ -103,7 +103,11 @@
 			<classifier>jdk15</classifier>
 		</dependency>
 
-
+	 <dependency>
+	    <groupId>io.netty</groupId>
+	    <artifactId>netty-all</artifactId>
+	    <version>4.1.5.Final</version>
+	</dependency>
 	</dependencies>
 	<modules>
 		<module>niejin-thrift-interface</module>
@@ -112,5 +116,6 @@
     <module>niejin-zookeeper-demo</module>
     <module>niejin-java-demo</module>
     <module>niejin-thirft-support</module>
+    <module>niejin-solr-extends</module>
   </modules>
 </project>

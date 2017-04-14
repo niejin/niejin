@@ -14,6 +14,7 @@ import com.duowan.niejin.thrift.UserService;
  **/
 @Component
 public class UserServiceImpl implements UserService.Iface {
+	
 	@Override
 	public User getUser(int id) throws TException {
 		User user = new User();

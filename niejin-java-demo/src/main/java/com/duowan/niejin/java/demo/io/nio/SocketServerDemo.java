@@ -56,6 +56,7 @@ public class SocketServerDemo {
 					// ==================================
 					continue;
 				}
+				
 				// 这里就是本次询问操作系统，所获取到的“所关心的事件”的事件类型（每一个通道都是独立的）
 				Iterator<SelectionKey> selectionKeys = selector.selectedKeys().iterator();
 

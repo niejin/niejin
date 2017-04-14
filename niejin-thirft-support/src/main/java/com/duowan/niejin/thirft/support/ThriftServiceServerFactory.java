@@ -2,6 +2,9 @@ package com.duowan.niejin.thirft.support;
 
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.reflect.Constructor;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.annotation.PostConstruct;
 
@@ -10,6 +13,7 @@ import org.apache.thrift.TMultiplexedProcessor;
 import org.apache.thrift.TProcessor;
 import org.apache.thrift.TProcessorFactory;
 import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.server.TNonblockingServer;
 import org.apache.thrift.server.TServer;
 import org.apache.thrift.server.TThreadedSelectorServer;
 import org.apache.thrift.transport.TFramedTransport;
@@ -142,6 +146,10 @@ public class ThriftServiceServerFactory implements InitializingBean {
 		public ServerThread(TProcessor processor, Integer port) throws TTransportException {
 			initServer(processor, port);
 		}
+		
+		public ServerThread(Map<String,TProcessor> processors, Integer port) throws TTransportException {
+			initServer2(processors, port);
+		}
 
 		private void initServer(TProcessor processor, Integer port) throws TTransportException {
 			//NonBlocking
@@ -150,14 +158,31 @@ public class ThriftServiceServerFactory implements InitializingBean {
 			TThreadedSelectorServer.Args tArgs = new TThreadedSelectorServer.Args(serverTransport);
 			
 			TProcessorFactory processorFactory = new TProcessorFactory(processor);
-			//多路复用
-			/*TMultiplexedProcessor multiplexedProccessor = new TMultiplexedProcessor();
-			multiplexedProccessor.registerProcessor("server1", server1_processor);*/
-			
 			tArgs.processorFactory(processorFactory);
 			tArgs.transportFactory(new TFramedTransport.Factory());
 			tArgs.protocolFactory(new TBinaryProtocol.Factory(true, true));
 			server = new TThreadedSelectorServer(tArgs);
+		}
+
+		private void initServer2(Map<String,TProcessor> processorMap, Integer port) throws TTransportException {
+			//NonBlocking
+			TNonblockingServerSocket serverTransport = new TNonblockingServerSocket(port);
+			//
+			TThreadedSelectorServer.Args tArgs = new TThreadedSelectorServer.Args(serverTransport);
+			//多路复用
+			TMultiplexedProcessor multiplexedProccessor = new TMultiplexedProcessor();
+			Iterator<Entry<String, TProcessor>> entry = processorMap.entrySet().iterator();
+			while(entry.hasNext()){
+				Entry<String, TProcessor> kv = entry.next();
+				multiplexedProccessor.registerProcessor(kv.getKey(), kv.getValue());
+			}
+			
+			TProcessorFactory processorFactory = new TProcessorFactory(multiplexedProccessor);
+			tArgs.processorFactory(processorFactory);
+			tArgs.transportFactory(new TFramedTransport.Factory());
+			tArgs.protocolFactory(new TBinaryProtocol.Factory(true, true));
+			server = new TThreadedSelectorServer(tArgs);
+			//server = new TNonblockingServer(tArgs);
 		}
 
 		@Override

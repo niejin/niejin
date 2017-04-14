@@ -6,6 +6,7 @@ import org.apache.commons.pool.BasePoolableObjectFactory;
 import org.apache.thrift.TServiceClient;
 import org.apache.thrift.TServiceClientFactory;
 import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TMultiplexedProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TSocket;
@@ -48,11 +49,11 @@ public class ThriftClientPoolFactory extends BasePoolableObjectFactory<TServiceC
 			throw new ThriftException("No provider available for remote api");
 		}
 		
-		TSocket socket = new TSocket(address.getHostName(),address.getPort());
-		TTransport transport = new TFramedTransport(socket);
-		TProtocol protocol = new TBinaryProtocol(transport);
-		TServiceClient client = this.clientFactory.getClient(protocol);
+		TTransport transport = new TFramedTransport(new TSocket(address.getHostName(),address.getPort()));
 		transport.open();
+		
+		TProtocol protocol = new TMultiplexedProtocol(new TBinaryProtocol(transport), this.serverAddressProvider.getService());
+		TServiceClient client = this.clientFactory.getClient(protocol);
 		
 		if(callback != null){
 			try{

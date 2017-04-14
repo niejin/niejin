@@ -58,12 +58,13 @@ public class ThriftServiceClientProxyFactory implements FactoryBean<Object>,Init
 	}
 
 	
+	@SuppressWarnings("unchecked")
 	public void init() {
 		try {
 			ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-			// 加载Iface接口
+			// 加载${Service}.Iface接口
 			objectClass = classLoader.loadClass(serverAddressProvider.getService() + "$Iface");
-			// 加载client.Factory类
+			// 加载${Service}.client.Factory类
 			Class<TServiceClientFactory<TServiceClient>> factoryClzz = (Class<TServiceClientFactory<TServiceClient>>) classLoader
 					.loadClass(serverAddressProvider.getService() + "$Client$Factory");
 

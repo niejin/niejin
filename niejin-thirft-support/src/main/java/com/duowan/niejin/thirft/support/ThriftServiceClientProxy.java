@@ -14,12 +14,6 @@ import org.apache.thrift.TServiceClient;
 public class ThriftServiceClientProxy implements InvocationHandler {
 
 	private GenericObjectPool<TServiceClient> pool;
-
-	private TServiceClient client;
-
-	public ThriftServiceClientProxy(TServiceClient client) {
-		this.client = client;
-	}
 	
 	public ThriftServiceClientProxy(GenericObjectPool<TServiceClient> pool) {
 		this.pool = pool;
